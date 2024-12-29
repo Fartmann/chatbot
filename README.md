@@ -5,22 +5,26 @@ This project provides a real-time chat application built in Python that allows u
 
 # Installation
 1. Copy the repository to the needed directory :
+```bash
 **git clone https://github.com/Fartmann/chatbot.git**
-
+```
 ...or download the ZIP-file and put the files in the needed directory.
 
 2. Create a virtual environment and activate it:
+```bash
 **python3 -m venv env
 source .\env\Scripts\activate  # On Linux: env/bin/activate**
-
+```
 3. Install the required dependencies:
+```bash
 **pip install ollama chromadb streamlit**
-
-4. Choose the directory where your 
+```
+4. Choose the directory where your pypa.py is.
 
 5. Run the application in the terminal
+```bash
 streamlit run pypa.py
-
+```
 # Usage
 
 Open the browser and navigate to the link that was written in terminal.

@@ -5,10 +5,10 @@ import time
 from llama_index.llms.ollama import Ollama
 from chromadb import Client
 
-# Настройка логирования
+# Logging
 logging.basicConfig(level=logging.INFO)
 
-# Инициализация клиента ChromaDB
+# Chromadb initialization
 try:
     chromadb_client = Client()
     collection = chromadb_client.get_or_create_collection("chat_responses")  # Создание или получение коллекции
@@ -18,7 +18,7 @@ except Exception as e:
 if 'messages' not in st.session_state:
     st.session_state.messages = []
 
-# Функция для общения с моделью
+# function to speak with the model
 def stream_chat(model, messages):
     try:
         llm = Ollama(model=model, request_timeout=120.0)
@@ -35,12 +35,12 @@ def stream_chat(model, messages):
         logging.error(f"Error during streaming: {str(e)}")
         return f"An unexpected error occurred: {str(e)}"
 
-# Функция добавления данных в ChromaDB
+# Chromadb add files
 def add_to_chroma_db(model, message):
     try:
         collection.add(
-            ids=[str(int(time.time()))],  # Уникальный ID для документа
-            documents=[message["content"]],  # Содержимое документа
+            ids=[str(int(time.time()))],  # unique ID
+            documents=[message["content"]],  # insides of the document
             metadatas=[{
                 "model": model,
                 "role": message["role"],
@@ -51,46 +51,46 @@ def add_to_chroma_db(model, message):
     except Exception as e:
         logging.error(f"Error adding to ChromaDB: {str(e)}")
 
-# Основная функция
+# main function
 def main():
     st.title("Chat with LLMs Models")
     logging.info("App started")
 
-    # Выбор модели
+    # model choice
     model = st.sidebar.selectbox("Choose a model", ["llama3.2", "llama3.1 8b", "phi3", "mistral"])
     logging.info(f"Model selected: {model}")
 
-    # Чат
+    # chat itself
     if prompt := st.chat_input("Your question"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         logging.info(f"User input: {prompt}")
 
-        # Отображение сообщений
+        # to show messages
         for message in st.session_state.messages:
             with st.chat_message(message["role"]):
                 st.write(message["content"])
 
-        # Ответ
+        # answer
         if st.session_state.messages[-1]["role"] != "assistant":
             with st.chat_message("assistant"):
                 st.spinner("Writing...")
                 start_time = time.time()
 
                 try:
-                    # Подготовка сообщений для модели
+                    # preparation of messages for chat
                     messages = [ChatMessage(role=msg["role"], content=msg["content"]) for msg in st.session_state.messages]
                     response_message = stream_chat(model, messages)
                     duration = time.time() - start_time
 
-                    # Добавление в сессию
+                    # session adding
                     response_message_with_duration = f"{response_message}\n\nDuration: {duration:.2f} seconds"
                     st.session_state.messages.append({"role": "assistant", "content": response_message_with_duration})
 
-                    # Вывод ответа
+                    # the output of the answer
                     st.write(response_message_with_duration)
                     logging.info(f"Response: {response_message}, Duration: {duration:.2f} s")
 
-                    # Сохранение в ChromaDB
+                    # saving to chromadb
                     add_to_chroma_db(model, {"role": "assistant", "content": response_message_with_duration})
                 except Exception as e:
                     error_msg = f"An error occurred while generating the response: {str(e)}"
@@ -98,7 +98,7 @@ def main():
                     st.error(error_msg)
                     logging.error(error_msg)
 
-    # Кнопка для проверки базы данных ChromaDB
+    # button to check if the chromadb works, just to show
     if st.button("Check ChromaDB"):
         try:
             results = collection.get()

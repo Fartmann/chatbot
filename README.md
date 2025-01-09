@@ -4,6 +4,7 @@
 This project provides a real-time chat application built in Python that allows users to interact with a Large Language Model (LLM) through a web browser. The application uses Streamlit for the front-end interface and integrates LLM called Ollama to generate responses. All chat queries and responses will be stored in a vector store for retrieval and analysis using a database called ChromaDB.
 
 # Installation
+
 1. Copy the repository to the needed directory :
 ```bash
 git clone https://github.com/Fartmann/chatbot.git
@@ -25,6 +26,8 @@ pip install ollama chromadb streamlit
 ```bash
 streamlit run pypa.py
 ```
+P.S. You may have to install Ollama on your PC, but not through pip, but manually install it on its website https://ollama.com. And you have to run Ollama to run the program.
+
 # Usage
 
 Open the browser and navigate to the link that was written in terminal.

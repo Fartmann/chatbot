@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 # chromadb initialization
 try:
     chromadb_client = Client()
-    collection = chromadb_client.get_or_create_collection("chat_responses")  # Create or retrieve collection
+    collection = chromadb_client.get_or_create_collection("chat_responses")
 except Exception as e:
     logging.error(f"ChromaDB initialization error: {str(e)}")
     collection = None

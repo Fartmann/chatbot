@@ -68,7 +68,7 @@ def stream_chat(model, messages):
 
 # Main Streamlit UI
 def main():
-    st.title("📢 Chat with LLMs Models using Ollama")
+    st.title("Chat with Ollama")
     logging.info("App started successfully.")
 
     # Sidebar model selection
@@ -76,7 +76,7 @@ def main():
     logging.info(f"Selected Model: {model}")
 
     # **FILE UPLOAD SECTION**
-    uploaded_files = st.sidebar.file_uploader("📂 Upload text files", type=["txt"], accept_multiple_files=True)
+    uploaded_files = st.sidebar.file_uploader("Upload text files", type=["txt"], accept_multiple_files=True)
 
     if uploaded_files:
         for uploaded_file in uploaded_files:
@@ -88,7 +88,7 @@ def main():
                 logging.info(f"File {uploaded_file.name} uploaded successfully.")
 
                 # Display uploaded content
-                with st.expander(f"📄 View content of {uploaded_file.name}"):
+                with st.expander(f"View content of {uploaded_file.name}"):
                     st.text(text)
 
             except Exception as e:
@@ -96,7 +96,7 @@ def main():
                 logging.error(f"Error reading {uploaded_file.name}: {e}")
 
     # **CHAT INPUT SECTION**
-    if prompt := st.chat_input("💬 Ask a question"):
+    if prompt := st.chat_input("Ask a question"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         store_in_chroma("user", prompt)
         logging.info(f"User input: {prompt}")
@@ -109,7 +109,7 @@ def main():
                 start_time = time.time()
                 logging.info("Generating response...")
 
-                with st.spinner("Thinking... 🤔"):
+                with st.spinner("Thinking..."):
                     try:
                         messages = [ChatMessage(role=msg["role"], content=msg["content"]) for msg in st.session_state.messages]
 
@@ -120,10 +120,10 @@ def main():
 
                         response_message = stream_chat(model, messages)
                         duration = time.time() - start_time
-                        response_message_with_duration = f"{response_message}\n\n🕒 Response Time: {duration:.2f} seconds"
+                        response_message_with_duration = f"{response_message}\n\nResponse Time: {duration:.2f} seconds"
                         st.session_state.messages.append({"role": "assistant", "content": response_message_with_duration})
                         store_in_chroma("assistant", response_message_with_duration)
-                        st.write(f"🕒 Response Time: {duration:.2f} seconds")
+                        st.write(f"Response Time: {duration:.2f} seconds")
                         logging.info(f"Response: {response_message}, Time: {duration:.2f} seconds")
 
                     except Exception as e:
@@ -134,7 +134,7 @@ def main():
     # **SHOW SAVED CHAT HISTORY**
     if st.sidebar.button("📜 Show Chat History"):
         docs, metas = retrieve_from_chroma()
-        st.sidebar.write("💬 Chat History:")
+        st.sidebar.write("Chat History:")
         for doc, meta in zip(docs, metas):
             st.sidebar.write(f"**{meta['role']}**: {doc}")
 

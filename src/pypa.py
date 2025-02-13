@@ -5,26 +5,24 @@ import time
 from llama_index.llms.ollama import Ollama
 from pymongo import MongoClient
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 
-# Initialize MongoDB client
 client = MongoClient("mongodb+srv://adamsatyshev10:skLZeav4NKdyvovk@cluster0.yumpv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = client["chat_db"]
 chat_collection = db["chat_history"]
 
-# Initialize session state
+# Session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "uploaded_texts" not in st.session_state:
-    st.session_state.uploaded_texts = []  # List to store multiple uploaded files' content
+    st.session_state.uploaded_texts = []
 
-# Function to store messages in MongoDB
+# storing
 def store_in_mongo(role, content):
     chat_collection.insert_one({"role": role, "content": content, "timestamp": time.time()})
 
-# Function to retrieve stored messages from MongoDB
+# retrieving
 def retrieve_from_mongo():
     try:
         results = chat_collection.find().sort("timestamp", 1)
@@ -33,7 +31,7 @@ def retrieve_from_mongo():
         logging.error(f"Error retrieving data: {e}")
         return []
 
-# Function to stream chat response from Ollama
+# chat response
 def stream_chat(model, messages):
     try:
         llm = Ollama(model=model, request_timeout=120.0)
@@ -49,28 +47,28 @@ def stream_chat(model, messages):
         logging.error(f"Error during streaming: {str(e)}")
         return "Error generating response."
 
-# Main Streamlit UI
+# frontend
 def main():
     st.title("Chat with Ollama")
     logging.info("App started successfully.")
 
-    # Sidebar model selection
-    model = st.sidebar.selectbox("🛠 Choose Model", ["llama3.2:latest", "llama3.1 8b"])
+    # sidebar
+    model = st.sidebar.selectbox("Choose Model", ["llama3.2:latest", "llama3.1 8b"])
     logging.info(f"Selected Model: {model}")
 
-    # **FILE UPLOAD SECTION**
+    # upload files
     uploaded_files = st.sidebar.file_uploader("Upload text files", type=["txt"], accept_multiple_files=True)
 
     if uploaded_files:
         for uploaded_file in uploaded_files:
             try:
                 text = uploaded_file.read().decode("utf-8").strip()
-                st.session_state.uploaded_texts.append(text)  # Store multiple files
-                store_in_mongo("system", text)  # Store in MongoDB
+                st.session_state.uploaded_texts.append(text)
+                store_in_mongo("system", text)
                 st.sidebar.success(f"Uploaded: {uploaded_file.name}")
                 logging.info(f"File {uploaded_file.name} uploaded successfully.")
 
-                # Display uploaded content
+                # content display
                 with st.expander(f"View content of {uploaded_file.name}"):
                     st.text(text)
 
@@ -78,7 +76,7 @@ def main():
                 st.sidebar.error(f"Error loading file: {uploaded_file.name}")
                 logging.error(f"Error reading {uploaded_file.name}: {e}")
 
-    # **CHAT INPUT SECTION**
+    # chat input
     if prompt := st.chat_input("Ask a question"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         store_in_mongo("user", prompt)
@@ -96,7 +94,7 @@ def main():
                     try:
                         messages = [ChatMessage(role=msg["role"], content=msg["content"]) for msg in st.session_state.messages]
 
-                        # Add uploaded files' text to the conversation context
+                        # context of files
                         if st.session_state.uploaded_texts:
                             context_text = "\n\n".join(st.session_state.uploaded_texts)
                             messages.insert(0, ChatMessage(role="system", content=f"Documents contain:\n{context_text}"))
@@ -114,8 +112,8 @@ def main():
                         st.error("An error occurred while generating response.")
                         logging.error(f"Error: {str(e)}")
 
-    # **SHOW SAVED CHAT HISTORY**
-    if st.sidebar.button("📜 Show Chat History"):
+    # chat history
+    if st.sidebar.button("Show Chat History"):
         history = retrieve_from_mongo()
         st.sidebar.write("Chat History:")
         for role, content in history:

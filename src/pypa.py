@@ -3,28 +3,15 @@ from llama_index.core.llms import ChatMessage
 import logging
 import time
 from llama_index.llms.ollama import Ollama
-import chromadb
-from chromadb.config import Settings
+from pymongo import MongoClient
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
-# Initialize ChromaDB settings
-settings = Settings(
-    persist_directory="chroma_data",
-    allow_reset=True
-)
-client = chromadb.Client(settings)
-
-# Initialize or create a ChromaDB collection
-def get_or_create_chroma_collection(name):
-    try:
-        return client.get_collection(name)
-    except chromadb.errors.InvalidCollectionException:
-        logging.info(f"Collection '{name}' not found. Creating new collection.")
-        return client.create_collection(name)
-
-chat_collection = get_or_create_chroma_collection("chat_history")
+# Initialize MongoDB client
+client = MongoClient("mongodb+srv://adamsatyshev10:skLZeav4NKdyvovk@cluster0.yumpv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+db = client["chat_db"]
+chat_collection = db["chat_history"]
 
 # Initialize session state
 if "messages" not in st.session_state:
@@ -33,22 +20,18 @@ if "messages" not in st.session_state:
 if "uploaded_texts" not in st.session_state:
     st.session_state.uploaded_texts = []  # List to store multiple uploaded files' content
 
-# Function to store messages in ChromaDB
-def store_in_chroma(role, content):
-    chat_collection.add(
-        documents=[content],
-        metadatas=[{"role": role}],
-        ids=[f"{role}-{len(st.session_state.messages)}"],
-    )
+# Function to store messages in MongoDB
+def store_in_mongo(role, content):
+    chat_collection.insert_one({"role": role, "content": content, "timestamp": time.time()})
 
-# Function to retrieve stored messages from ChromaDB
-def retrieve_from_chroma():
+# Function to retrieve stored messages from MongoDB
+def retrieve_from_mongo():
     try:
-        results = chat_collection.get()
-        return results["documents"], results["metadatas"]
+        results = chat_collection.find().sort("timestamp", 1)
+        return [(doc["role"], doc["content"]) for doc in results]
     except Exception as e:
         logging.error(f"Error retrieving data: {e}")
-        return [], []
+        return []
 
 # Function to stream chat response from Ollama
 def stream_chat(model, messages):
@@ -72,7 +55,7 @@ def main():
     logging.info("App started successfully.")
 
     # Sidebar model selection
-    model = st.sidebar.selectbox("🛠 Choose Model", ["llama3.2:latest", "llama3.1 8b", "phi3", "mistral"])
+    model = st.sidebar.selectbox("🛠 Choose Model", ["llama3.2:latest", "llama3.1 8b"])
     logging.info(f"Selected Model: {model}")
 
     # **FILE UPLOAD SECTION**
@@ -83,7 +66,7 @@ def main():
             try:
                 text = uploaded_file.read().decode("utf-8").strip()
                 st.session_state.uploaded_texts.append(text)  # Store multiple files
-                store_in_chroma("system", text)  # Store in ChromaDB
+                store_in_mongo("system", text)  # Store in MongoDB
                 st.sidebar.success(f"Uploaded: {uploaded_file.name}")
                 logging.info(f"File {uploaded_file.name} uploaded successfully.")
 
@@ -98,7 +81,7 @@ def main():
     # **CHAT INPUT SECTION**
     if prompt := st.chat_input("Ask a question"):
         st.session_state.messages.append({"role": "user", "content": prompt})
-        store_in_chroma("user", prompt)
+        store_in_mongo("user", prompt)
         logging.info(f"User input: {prompt}")
 
         with st.chat_message("user"):
@@ -122,7 +105,7 @@ def main():
                         duration = time.time() - start_time
                         response_message_with_duration = f"{response_message}\n\nResponse Time: {duration:.2f} seconds"
                         st.session_state.messages.append({"role": "assistant", "content": response_message_with_duration})
-                        store_in_chroma("assistant", response_message_with_duration)
+                        store_in_mongo("assistant", response_message_with_duration)
                         st.write(f"Response Time: {duration:.2f} seconds")
                         logging.info(f"Response: {response_message}, Time: {duration:.2f} seconds")
 
@@ -133,10 +116,10 @@ def main():
 
     # **SHOW SAVED CHAT HISTORY**
     if st.sidebar.button("📜 Show Chat History"):
-        docs, metas = retrieve_from_chroma()
+        history = retrieve_from_mongo()
         st.sidebar.write("Chat History:")
-        for doc, meta in zip(docs, metas):
-            st.sidebar.write(f"**{meta['role']}**: {doc}")
+        for role, content in history:
+            st.sidebar.write(f"**{role}**: {content}")
 
 if __name__ == "__main__":
     main()
